@@ -2,6 +2,7 @@
 #include <string>
 #include <boost/python.hpp>
 #include <stdio.h>
+#include <iostream>
 #include <numpy/ndarrayobject.h> // ensure you include this header
 using namespace boost::python;
 
@@ -13,9 +14,10 @@ namespace { // Avoid cluttering the global namespace.
 
     void CorrealateLine(float* data,float* newdata,int size){
         float sum;
-        for ( int i=0; i<size; i++ ){
+        int i,j,p;
+        for ( i=0; i<size; i++ ){
             sum=0;
-            for ( int j=0, p; j<size; j++ ){
+            for ( j=0; j<size; j++ ){
                 p = (i+j)%size;
                 sum+=data[j]*data[p];
             }
@@ -23,41 +25,59 @@ namespace { // Avoid cluttering the global namespace.
         }
     }
 
-    boost::python::object Correalate( boost::python::numeric::array data )
+    void Correalate( boost::python::numeric::array& data )
     {
-        boost::python::object shape = data.attr("shape");
-        int rows = extract<int>(shape[0]);
-        int cols = extract<int>(shape[1]);
-        float* line = new float[cols];
-        float* newline = new float[cols];
+        // boost::python::object shape = data.attr("shape");
+        // int rows = extract<int>(shape[0]);
+        // int cols = extract<int>(shape[1]);
+        // float* line = new float[cols];
+        // float* newline = new float[cols];
 
+        // for ( int n=0; n<rows; n++ ){
+        //     for ( int i=0; i<cols; i++ ){
+        //         line[i] = extract<float>(data[make_tuple(n,i)]);
+        //     }
+        //     CorrealateLine(line,newline,cols);
+        //     for ( int i=0; i<cols; i++ ){
+        //         data[make_tuple(n,i)] = newline[i];
+        //     }
+        // }
+
+        // delete[] line;
+        // delete[] newline;
+
+        PyArrayObject *ptr = (PyArrayObject *)data.ptr();
+        if (ptr == NULL) {
+            std::cerr << "Could not get NP array." << std::endl;
+        }
+        const int dims =  PyArray_NDIM(ptr);
+        if (dims != 2)
+        {
+            std::cerr << "Wrong dimension on array." << std::endl;
+        }
+        int rows = *(PyArray_DIMS(ptr));
+        int cols = *(PyArray_DIMS(ptr)+1);
+
+
+        if (ptr->descr->elsize != sizeof(float))
+        {
+            std::cerr << "Must be numpy.float32 ndarray" << std::endl;
+        }
+        std::cerr << rows << " " << cols << std::endl;
+
+        float* newline = new float[cols];
         for ( int n=0; n<rows; n++ ){
-            for ( int i=0; i<cols; i++ ){
-                line[i] = extract<float>(data[make_tuple(n,i)]);
-            }
+            float *line = static_cast<float*> PyArray_GETPTR2(ptr, n, 0);
             CorrealateLine(line,newline,cols);
             for ( int i=0; i<cols; i++ ){
-                data[make_tuple(n,i)] = newline[i];
+                line[i] = newline[i];
             }
         }
 
-        delete[] line;
         delete[] newline;
 
-        //  // const_cast is rather horrible but we need a writable pointer
-        //   double * data = size ? const_cast<double *>(&vec[0]) : static_cast<double *>(NULL);
-        // // create a PyObject * from pointer and data 
-        //   PyObject * pyObj = PyArray_SimpleNewFromData( 1, &size, NPY_DOUBLE, data );
-        //   boost::python::handle<> handle( pyObj );
-        //   boost::python::numeric::array arr( handle );
-
-        // /* The problem of returning arr is twofold: firstly the user can modify
-        //   the data which will betray the const-correctness 
-        //   Secondly the lifetime of the data is managed by the C++ API and not the lifetime
-        //   of the numpy array whatsoever. But we have a simply solution..
-        //  */
-
-        return data.copy(); // copy the object. numpy owns the copy now.
+        return;
+        
     }
 }
 
