@@ -63,7 +63,7 @@ namespace { // Avoid cluttering the global namespace.
         {
             std::cerr << "Must be numpy.float32 ndarray" << std::endl;
         }
-        std::cerr << rows << " " << cols << std::endl;
+        // std::cerr << rows << " " << cols << std::endl;
 
         float* newline = new float[cols];
         for ( int n=0; n<rows; n++ ){
